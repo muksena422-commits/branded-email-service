@@ -22,7 +22,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'retry
     }
 }
 
-$logs = $pdo->query("SELECT * FROM email_log ORDER BY id DESC LIMIT 200")->fetchAll();
+$logs = $pdo->query(
+    "SELECT l.*, s.name AS student_name, c.name AS college_name
+     FROM email_log l
+     LEFT JOIN students s ON s.id = l.student_id
+     LEFT JOIN colleges c ON c.id = l.college_id
+     ORDER BY l.id DESC LIMIT 200"
+)->fetchAll();
 
 $pageTitle = 'Email Log';
 $activePage = 'log';
@@ -41,23 +47,28 @@ require __DIR__ . '/../includes/header.php';
     <thead>
       <tr style="text-align:left;border-bottom:1px solid #E2E8F0;">
         <th style="padding:8px;">ID</th>
+        <th style="padding:8px;">Student</th>
+        <th style="padding:8px;">College</th>
         <th style="padding:8px;">Recipient</th>
         <th style="padding:8px;">Type</th>
         <th style="padding:8px;">Subject</th>
         <th style="padding:8px;">Status</th>
         <th style="padding:8px;">Attempts</th>
         <th style="padding:8px;">Error</th>
+        <th style="padding:8px;">Date</th>
         <th style="padding:8px;">Last attempt</th>
         <th style="padding:8px;"></th>
       </tr>
     </thead>
     <tbody>
       <?php if (!$logs): ?>
-        <tr><td colspan="9" style="padding:12px;color:#64748B;">No emails sent yet.</td></tr>
+        <tr><td colspan="12" style="padding:12px;color:#64748B;">No emails sent yet.</td></tr>
       <?php endif; ?>
       <?php foreach ($logs as $l): ?>
         <tr style="border-bottom:1px solid #F1F5F9;">
           <td style="padding:8px;"><?= (int)$l['id'] ?></td>
+          <td style="padding:8px;"><?= h($l['student_name'] ?? '(deleted)') ?></td>
+          <td style="padding:8px;"><?= h($l['college_name'] ?? '(deleted)') ?></td>
           <td style="padding:8px;"><?= h($l['recipient']) ?></td>
           <td style="padding:8px;"><?= h($l['email_type']) ?></td>
           <td style="padding:8px;"><?= h($l['subject']) ?></td>
@@ -66,6 +77,7 @@ require __DIR__ . '/../includes/header.php';
           </td>
           <td style="padding:8px;"><?= (int)$l['attempts'] ?></td>
           <td style="padding:8px;"><?= h($l['error_message'] ?? '') ?></td>
+          <td style="padding:8px;"><?= h($l['created_at'] ?? '') ?></td>
           <td style="padding:8px;"><?= h($l['last_attempt_at'] ?? '') ?></td>
           <td style="padding:8px;">
             <?php if ($l['status'] === 'failed'): ?>
