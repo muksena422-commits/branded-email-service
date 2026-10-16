@@ -3,6 +3,7 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/events.php';
 requireLogin();
 
 $errors = [];
@@ -36,6 +37,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$errors) {
         $stmt = $pdo->prepare("INSERT INTO students (name, email, college_id) VALUES (?, ?, ?)");
         $stmt->execute([$old['name'], $old['email'], $old['college_id']]);
+        $newStudentId = (int)$pdo->lastInsertId();
+        handleEvent('student.created', ['student_id' => $newStudentId]);
         setFlash('Student added.');
         header('Location: students.php');
         exit;
@@ -95,10 +98,10 @@ require __DIR__ . '/../includes/header.php';
     <h3 style="margin-top:0">All students</h3>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Name</th><th>Email</th><th>College</th><th></th></tr></thead>
+        <thead><tr><th>Name</th><th>Email</th><th>College</th><th>Quick send</th><th></th></tr></thead>
         <tbody>
         <?php if (!$students): ?>
-          <tr><td colspan="4">No students yet.</td></tr>
+          <tr><td colspan="5">No students yet.</td></tr>
         <?php endif; ?>
         <?php foreach ($students as $s): ?>
           <tr>
@@ -110,6 +113,13 @@ require __DIR__ . '/../includes/header.php';
               <?php else: ?>
                 <span class="badge badge-muted">No college</span>
               <?php endif; ?>
+            </td>
+            <td>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <a class="btn btn-sm" title="Send welcome email" href="send_email.php?type=welcome&amp;student_id=<?= (int)$s['id'] ?>"><i class="fa-solid fa-hand-sparkles"></i> Welcome</a>
+                <a class="btn btn-sm" title="Send exam result" href="send_email.php?type=result&amp;student_id=<?= (int)$s['id'] ?>"><i class="fa-solid fa-trophy"></i> Result</a>
+                <a class="btn btn-sm" title="Send disqualification notice" style="color:#B91C1C;" href="send_email.php?type=disqualification&amp;student_id=<?= (int)$s['id'] ?>"><i class="fa-solid fa-triangle-exclamation"></i> Disqualify</a>
+              </div>
             </td>
             <td>
               <form method="POST" onsubmit="return confirm('Delete this student?');">
